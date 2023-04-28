@@ -2,13 +2,17 @@ package Routes
 
 import (
 	"go-todo-app/Controllers"
+	middleware "go-todo-app/middlewares"
 
 	"github.com/gin-gonic/gin"
 )
 
+var encryptedString string
+
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 	v1 := r.Group("/v1")
+	v1.Use(middleware.DecryptRequest())
 	{
 		v1.GET("todo", Controllers.GetTodos)
 		v1.POST("todo", Controllers.CreateATodo)
@@ -21,6 +25,11 @@ func SetupRouter() *gin.Engine {
 		{
 			secured.GET("/ping", Controllers.Ping)
 		}
+	}
+	encrypt := r.Group("/data")
+	{
+		encrypt.POST("encrypt", Controllers.EncryptDataHandler)
+		encrypt.POST("decrypt", Controllers.DecryptDataHandler)
 	}
 	return r
 }

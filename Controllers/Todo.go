@@ -1,6 +1,8 @@
 package Controllers
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -27,12 +29,19 @@ func GetTodos(c *gin.Context) {
 		}
 		todos = append(todos, todo)
 	}
-	c.JSON(http.StatusOK, todos)
+	data, _ := json.Marshal(todos)
+	fmt.Println(data)
+	c.JSON(http.StatusOK, AESEncrypt(string(data), []byte(c.Request.Header.Get("x-key")), c.Request.Header.Get("x-iv")))
 }
 
 func CreateATodo(c *gin.Context) {
 	var todo Models.Todo
-	c.BindJSON(&todo)
+	decryptedData, exists := c.Get("decryptedText")
+	if !exists {
+		c.AbortWithError(http.StatusBadRequest, errors.New("decrypted data not found"))
+		return
+	}
+	json.Unmarshal(decryptedData.([]byte), &todo)
 	db := Config.ConnectToDB()
 	defer db.Close()
 	_, err := db.Query("insert into todo(ID, Title, Description) values(?,?,?)", todo.ID, todo.Title, todo.Description)
@@ -40,7 +49,7 @@ func CreateATodo(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, err)
 		return
 	}
-	c.JSON(http.StatusCreated, "Todo created Successfully.....")
+	c.JSON(http.StatusCreated, AESEncrypt("Todo created Successfully.....", []byte(c.Request.Header.Get("x-key")), c.Request.Header.Get("x-iv")))
 }
 
 func GetATodo(c *gin.Context) {
@@ -59,7 +68,9 @@ func GetATodo(c *gin.Context) {
 			return
 		}
 	}
-	// c.BindJSON(row)
+	data, _ := json.Marshal(todo)
+	fmt.Println(data)
+	c.JSON(http.StatusOK, AESEncrypt(string(data), []byte(c.Request.Header.Get("x-key")), c.Request.Header.Get("x-iv")))
 	c.JSON(http.StatusOK, todo)
 }
 
@@ -74,7 +85,7 @@ func UpdateATodo(c *gin.Context) {
 		fmt.Fprint(c.Writer, err)
 		return
 	}
-	c.JSON(http.StatusOK, "Updated Successfully.......")
+	c.JSON(http.StatusOK, AESEncrypt("Updated Successfully.......", []byte(c.Request.Header.Get("x-key")), c.Request.Header.Get("x-iv")))
 }
 
 func DeleteATodo(c *gin.Context) {
@@ -86,5 +97,5 @@ func DeleteATodo(c *gin.Context) {
 		fmt.Fprint(c.Writer, err)
 		return
 	}
-	c.JSON(http.StatusOK, "Record deleted Succesfully.......")
+	c.JSON(http.StatusOK, AESEncrypt("Record deleted Succesfully.......", []byte(c.Request.Header.Get("x-key")), c.Request.Header.Get("x-iv")))
 }

@@ -1,6 +1,8 @@
 package Controllers
 
 import (
+	"encoding/json"
+	"errors"
 	"go-todo-app/Config"
 	models "go-todo-app/Models"
 	"net/http"
@@ -10,11 +12,12 @@ import (
 
 func RegisterUser(context *gin.Context) {
 	var user models.User
-	if err := context.ShouldBindJSON(&user); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		context.Abort()
+	decryptedData, exists := context.Get("decryptedText")
+	if !exists {
+		context.AbortWithError(http.StatusBadRequest, errors.New("decrypted data not found"))
 		return
 	}
+	json.Unmarshal(decryptedData.([]byte), &user)
 	db := Config.ConnectToDB()
 	defer db.Close()
 	_, err := db.Query("insert into users(Name, Username, Email, Password) values(?,?,?,?)", user.Name, user.Username, user.Email, user.Password)
@@ -23,6 +26,5 @@ func RegisterUser(context *gin.Context) {
 		context.Abort()
 		return
 	}
-
-	context.JSON(http.StatusCreated, "Success........")
+	context.JSON(http.StatusCreated, AESEncrypt("Success........", []byte(context.Request.Header.Get("x-key")), context.Request.Header.Get("x-iv")))
 }
