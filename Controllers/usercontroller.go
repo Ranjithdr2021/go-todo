@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"go-todo-app/Config"
-	models "go-todo-app/Models"
+	"go-todo-app/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +18,7 @@ func RegisterUser(context *gin.Context) {
 		return
 	}
 	json.Unmarshal(decryptedData.([]byte), &user)
-	db := Config.ConnectToDB()
+	db := Config.Database.ConnectToDB()
 	defer db.Close()
 	_, err := db.Query("insert into users(Name, Username, Email, Password) values(?,?,?,?)", user.Name, user.Username, user.Email, user.Password)
 	if err != nil {
